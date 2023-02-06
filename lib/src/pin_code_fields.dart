@@ -410,7 +410,7 @@ class _PinCodeTextFieldState extends State<PinCodeTextField> with TickerProvider
     }
   }
 
-  // Assigning the text controller, if empty assiging a new one.
+  // Assigning the text controller, if empty assigning a new one.
   void _assignController() {
     if (widget.controller == null) {
       _textEditingController = TextEditingController();
@@ -442,7 +442,10 @@ class _PinCodeTextFieldState extends State<PinCodeTextField> with TickerProvider
             Future.delayed(Duration(milliseconds: 300), () => widget.onCompleted!(currentText));
           }
 
-          if (widget.autoDismissKeyboard) _focusNode!.unfocus();
+          if (widget.autoDismissKeyboard) {
+            _focusNode!.unfocus();
+            WidgetsBinding.instance.focusManager.primaryFocus?.unfocus();
+          }
         }
         widget.onChanged(currentText);
       }
@@ -750,20 +753,22 @@ class _PinCodeTextFieldState extends State<PinCodeTextField> with TickerProvider
                   _onFocus();
                 },
                 onLongPress: widget.enabled
-                    ? widget.onLongPress != null
-                        ? widget.onLongPress!.call()
-                        : () async {
-                            var data = await Clipboard.getData("text/plain");
-                            if (data?.text?.isNotEmpty ?? false) {
-                              if (widget.beforeTextPaste != null) {
-                                if (widget.beforeTextPaste!(data!.text)) {
-                                  _showPasteDialog(data.text!);
-                                }
-                              } else {
-                                _showPasteDialog(data!.text!);
-                              }
+                    ? () async {
+                        if (widget.onLongPress != null) {
+                          widget.onLongPress!.call();
+                          return;
+                        }
+                        final data = await Clipboard.getData("text/plain");
+                        if (data?.text?.isNotEmpty ?? false) {
+                          if (widget.beforeTextPaste != null) {
+                            if (widget.beforeTextPaste!(data!.text)) {
+                              _showPasteDialog(data.text!);
                             }
+                          } else {
+                            _showPasteDialog(data!.text!);
                           }
+                        }
+                      }
                     : null,
                 child: Row(
                   mainAxisAlignment: widget.mainAxisAlignment,
@@ -845,6 +850,7 @@ class _PinCodeTextFieldState extends State<PinCodeTextField> with TickerProvider
   void _onFocus() {
     if (_focusNode!.hasFocus && MediaQuery.of(widget.appContext).viewInsets.bottom == 0) {
       _focusNode!.unfocus();
+      WidgetsBinding.instance.focusManager.primaryFocus?.unfocus();
       Future.delayed(const Duration(microseconds: 1), () => _focusNode!.requestFocus());
     } else {
       _focusNode!.requestFocus();
